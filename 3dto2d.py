@@ -38,7 +38,7 @@ pFill = []
 
 square_00 = shapes.Cube(origin, 5.0)
 points.extend(square_00.points())
-pFill.extend(square_00.fill(10))
+pFill.extend(square_00.fill())
 
 
 line_00 = shapes.Line((-5,-5,-5), (5,5,5))
@@ -109,7 +109,7 @@ def perspective_division(eye, point, plane_dist=1.0):
 HEIGHT, WIDTH = console_map.get_screen_size()
 HEIGHT -= 1
 dist = 1.0
-eye = (0.0, 0.0, -23.0)
+eye = (0.0, 0.0, -13.0)
 
 #3Drotate the points
 for rotation in np.linspace(-8 * np.pi, 8 * np.pi, 500):
