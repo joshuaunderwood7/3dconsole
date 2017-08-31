@@ -90,10 +90,12 @@ def print_screen_matrix(screen_matrix, symbol='.', filler=' '):
     return '\n'.join(( ''.join( (symbol if B else filler for B in line) )
                         for line in reversed(list(screen_matrix))
                      ))
+
 def print_screen_matrix_layers(screen_matrix, symbols=' .'):
     return '\n'.join(( ''.join( symbols[B] for B in line )
                         for line in reversed(list(screen_matrix))
                      ))
+
 def interpolate(p0, p1, N=10):
     # y - y0   y1 - y0
     # ------ = -------

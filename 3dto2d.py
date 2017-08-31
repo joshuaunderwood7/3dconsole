@@ -1,53 +1,35 @@
 import itertools as I
 import math
-import numpy as np
 import sys
 import time
+import random
+
+import numpy as np
 import colorama
 
 import console_map
-import pannom
 import shapes
 import teapot
 
 
-origin = np.array([0,0,0])
-xpoints = np.array([origin[0]-5.0, origin[0]+5.0])
-ypoints = np.array([origin[0]-5.0, origin[0]+5.0])
-zpoints = np.array([origin[0]-5.0, origin[0]+5.0])
-z_curve_x = pannom.UtilityCurve( xpoints[0]
-                               , xpoints[0] + (xpoints[1] - xpoints[0]) * 0.45
-                               , xpoints[0] + (xpoints[1] - xpoints[0]) * 0.60
-                               , xpoints[0] + (xpoints[1] - xpoints[0]) * 0.95
-                               , xpoints[1]
-                               , weight = 0.5
-                               , bounty = zpoints[1] - zpoints[0]
-                               )
+# points.extend(square_00.points())
+# pFill.extend(square_00.fill())
 
-z_curve_y = pannom.UtilityCurve( ypoints[0]
-                               , ypoints[0] + (ypoints[1] - ypoints[0]) * 0.25
-                               , ypoints[0] + (ypoints[1] - ypoints[0]) * 0.60
-                               , ypoints[0] + (ypoints[1] - ypoints[0]) * 0.90
-                               , ypoints[1]
-                               , weight = 0.5
-                               , bounty = zpoints[1] - zpoints[0]
-                               )
+squares = [ shapes.Cube((x,y,z), 2.0) 
+            for x,y,z in I.product([-10,0,10],[-10,0,10],[0]) ]
 
-points = []
-pFill = []
+# tetrahedron_00 = shapes.Tetrahedron((-5,-5,-5),(5,5,-5),(-5,5,5),(5,-5,5))
+# points.extend(tetrahedron_00.points())
+# pFill.extend(tetrahedron_00.fill(9))
 
-square_00 = shapes.Cube(origin, 5.0)
-points.extend(square_00.points())
-pFill.extend(square_00.fill())
+# tetrahedron_01 = shapes.Tetrahedron(( 5, 5, 5),(-5,-5,5),(-5,5,-5),(5,-5,-5))
+# points.extend(tetrahedron_01.points())
+# pFill.extend(tetrahedron_01.shell(9))
 
 
-line_00 = shapes.Line((-5,-5,-5), (5,5,5))
-points.extend(line_00.fill(20))
+# line_00 = shapes.Line((-5,-5,-5), (5,5,5))
+# points.extend(line_00.fill(20))
 
-
-uCurve = []
-for x,y in pannom.getMSR_ND([z_curve_x, z_curve_y], N=50):
-    uCurve.append((np.float(x),np.float(y), zpoints[0] + z_curve_x(x) + z_curve_y(y)))
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -85,9 +67,7 @@ def rotate3D(point, r_angles, origin=np.array([0.0,0.0,0.0])):
                    , [  np.sin(r_rads[2]),  np.cos(r_rads[2]),                 0.0]
                    , [                0.0,                0.0,                 1.0]
                    ])
-    new_point = new_point * x_rot 
-    new_point = new_point * y_rot
-    new_point = new_point * z_rot
+    new_point = new_point * x_rot * y_rot * z_rot
     new_point += origin
     return new_point
 
@@ -109,31 +89,24 @@ def perspective_division(eye, point, plane_dist=1.0):
 HEIGHT, WIDTH = console_map.get_screen_size()
 HEIGHT -= 1
 dist = 1.0
-eye = (0.0, 0.0, -13.0)
+eye = (0.0, 0.0, -20.0)
 
-#3Drotate the points
+#3Drotate the shapes
+matrix_maker   = console_map.get_screen_matrix_maker(-1.0,1.0, -1.0, 1.0, HEIGHT, WIDTH)
 for rotation in np.linspace(-8 * np.pi, 8 * np.pi, 500):
 
-    rotated_points = map( lambda p : rotate3D(p, np.array([25, np.sin(rotation) * 45, 0]), origin + np.array([0,0,0])), points)
-    new_points     = [ perspective_division(eye, point, dist) for point in rotated_points ]
-    visible_points = filter(lambda p: visible_test(p, dist), new_points)
-    plot_points    = map(lambda p: console_map.latlon(p[1], p[0]), visible_points)
+    #rotate shapes
+    new_points = []
+    for cube in squares:
+        cube.rotate3D(np.array([10,5,0]), cube.center)
+        new_points.extend([perspective_division(eye, point, dist) for point in cube.shell()])
 
-    rotated_pFill  = map( lambda p : rotate3D(p, np.array([25, np.sin(rotation) * 45, 0]), origin + np.array([0,0,0])), pFill)
-    new_pFill      = [ perspective_division(eye, point, dist) for point in rotated_pFill ]
-    visible_pFill  = filter(lambda p: visible_test(p, dist), new_pFill)
-    plot_pFill     = map(lambda p: console_map.latlon(p[1], p[0]), visible_pFill)
-
-    rotated_uCurve = map( lambda p : rotate3D(p, np.array([25, np.sin(rotation) * 45, 0]), origin + np.array([0,0,0])), uCurve)
-    new_uCurve     = [ perspective_division(eye, point, dist) for point in rotated_uCurve ]
-    visible_uCurve = filter(lambda p: visible_test(p, dist), new_uCurve)
-    plot_uCurve    = map(lambda p: console_map.latlon(p[1], p[0]), visible_uCurve)
-
-
-    matrix_maker   = console_map.get_screen_matrix_maker(-1.0,1.0, -1.0, 1.0, HEIGHT, WIDTH)
+    visible_points = I.ifilter(lambda p: visible_test(p, dist), new_points)
+    plot_points    = I.imap(lambda p: console_map.latlon(p[1], p[0]), visible_points)
+    
     cntr = I.count(1)
-    layers = map(lambda l: matrix_maker(l, next(cntr)), [plot_pFill, plot_points, plot_uCurve])
 
+    layers = I.imap(lambda l: matrix_maker(l, next(cntr)), [plot_points])
     smat = console_map.join_smat_layers_gen(layers)
 
     print colorama.Cursor.POS() + console_map.print_screen_matrix_layers(smat, symbols=' -#.'),
