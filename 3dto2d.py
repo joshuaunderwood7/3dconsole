@@ -13,10 +13,10 @@ import teapot
 
 
 
-N = 8
-R = 15
+N = 2
+R = 9
 V = 1
-Size = 3
+Size = 4
 cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
 
 # Size = 10
@@ -89,13 +89,16 @@ def perspective_division(eye, point, plane_dist=1.0):
     e = plane_dist
     return np.array([new_point[0] * e/Z, new_point[1] * e/Z])
 
-def make_plot_points(eye, points3d, shapes, dist = 1.0):
+def make_plot_points(eye, points3d, shapes, dist = 1.0, zip_depth=False):
 
     points = points3d
     # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points)
     points = I.imap(lambda p: perspective_division(eye, p, dist), points)
     points = I.ifilter(lambda p: visible_test(p, dist), points)
     points = I.imap(lambda p: console_map.latlon(p[1], p[0]), points)
+
+    if zip_depth:
+        points = I.izip(I.imap(lambda z: z[2], points3d), points)
 
     return points
 
@@ -112,6 +115,13 @@ rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint
 # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
 zipped_rotations_and_cubes = zip(rotations, cubes)
 
+layer_symbols = " #&%$|!;:+*-,."
+layer_symbols = " @#+=-:,."
+lls = len(layer_symbols)
+ldm = 2
+
+def layer(p): 
+    return int(len(layer_symbols) * (p[1] - eye[2]) / (20 - eye[2]))
 
 #3Drotate the shapes
 while True:
@@ -122,14 +132,23 @@ while True:
     for rotation, cube in zipped_rotations_and_cubes:
         cube.rotate3D(rotation, cube.center)
         # vert_points.extend(make_plot_points(eye, cube.points(), cubes, dist))
-        shll_points.extend(make_plot_points(eye,  cube.shell_vis(eye, N=10), cubes, dist))
+        shll_points.extend(make_plot_points (eye, cube.shell_vis(eye, N=14)
+                                            , cubes, dist, zip_depth=True))
 
-    cntr = I.count(1)
+    layers = [matrix_maker(vert_points, 1)]
 
-    layers = I.imap(lambda l: matrix_maker(l, next(cntr)), [shll_points, vert_points])
+    shll_points = I.imap(lambda x: (ldm + int((lls-ldm) * (x[0] + 20.0) / 40.0), x[1]), shll_points)
+    shll_points_dict = dict((x,[]) for x in xrange(ldm,lls+ldm))
+    for k,v in shll_points:
+        shll_points_dict[k].append(v)
+
+    for k,v in shll_points_dict.items():
+        layers.append(matrix_maker(v,k))
+
+    layers.reverse()
     smat = console_map.join_smat_layers_gen(layers)
 
-    print colorama.Cursor.POS() + console_map.print_screen_matrix_layers(smat, symbols=' -#.'),
+    print colorama.Cursor.POS() + console_map.print_screen_matrix_layers(smat, symbols=layer_symbols),
     # time.sleep(0.1)
 
 

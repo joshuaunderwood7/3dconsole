@@ -212,8 +212,6 @@ class Tetrahedron(Rotateable, Obscuring):
         if not seeB : result.extend(Tri(self.A,self.C,self.D).fill(N))
         if not seeC : result.extend(Tri(self.A,self.B,self.D).fill(N))
         if not seeA and bottom : result.extend(Tri(self.B,self.C,self.D).fill(N))
-
-
         return result
 
     def shell(self, N=4, bottom=True):
