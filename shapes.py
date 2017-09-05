@@ -2,6 +2,21 @@ import abc
 import numpy as np
 from itertools import product, ifilter, izip
 
+def sameside3d(p, ref, A,B,C ):
+    cpAB_BC = np.cross(A - B, A - C)
+
+    sameABCr = np.dot(ref - A, cpAB_BC)
+    sameABCp = np.dot(  p - A, cpAB_BC)
+
+    sameABC = any(( sameABCr < 0 and sameABCp < 0 
+                  , sameABCr > 0 and sameABCp > 0 
+                  ))
+
+    if sameABC:
+        return True
+
+    return False
+
 class Rotateable():
     __metaclass__ = abc.ABCMeta
 
@@ -32,9 +47,20 @@ class Rotateable():
                        , [                0.0,                0.0,                 1.0]
                        ])
         rot_matrix = x_rot * y_rot * z_rot
-        new_points = [ origin + (point - origin) * rot_matrix for point in self.points() ]
+        new_points = [ (origin + (point - origin) * rot_matrix).A1 
+                       for point in self.points() 
+                     ]
         self.set_points(new_points)
         return self
+
+class Obscuring():
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def contains_point(self, point):
+        " Test if point is within the shape. "
+        pass
+
 
 class Line(Rotateable):
     def __init__(self, A, B):
@@ -59,7 +85,7 @@ class Line(Rotateable):
         return [self.A + vec * ii for ii in np.linspace(0,1,N)]
 
 
-class Tri(Rotateable):
+class Tri(Rotateable, Obscuring):
     def __init__(self, A, B, C):
         self.A = np.array(A)
         self.B = np.array(B)
@@ -96,12 +122,14 @@ class Tri(Rotateable):
         dot11 = np.dot(v1, v1)
         dot12 = np.dot(v1, v2)
 
-        invDenom = (dot00 * dot11 - dot01 * dot01)
-        u = (dot11 * dot02 - dot01 * dot12) / invDenom
-        v = (dot00 * dot12 - dot01 * dot02) / invDenom
+        denom = (dot00 * dot11 - dot01 * dot01)
+        u = (dot11 * dot02 - dot01 * dot12) / denom
+        v = (dot00 * dot12 - dot01 * dot02) / denom
 
         return (u >= 0) and (v >= 0) and (u + v <= 1)
 
+    def contains_point(self, p): 
+        return self.point_in_triangle(p)
 
     def fill(self, N=4):
         us = np.linspace(0,1,N)
@@ -118,12 +146,17 @@ class Tri(Rotateable):
         return "{},{},{}".format(self.A, self.B, self.C)
 
 
-class Tetrahedron(Rotateable):
+class Tetrahedron(Rotateable, Obscuring):
     def __init__(self, A, B, C, D):
         self.A = np.array(A)
         self.B = np.array(B)
         self.C = np.array(C)
         self.D = np.array(D)
+
+        self.center = np.array(( np.mean(map(lambda x: x[0], [A,B,C,D]))
+                               , np.mean(map(lambda x: x[1], [A,B,C,D]))
+                               , np.mean(map(lambda x: x[2], [A,B,C,D]))
+                               ))
 
         self.AB = self.B - self.A
         self.AC = self.C - self.A
@@ -144,6 +177,14 @@ class Tetrahedron(Rotateable):
     def points(self):
         return [self.A, self.B, self.C, self.D]
 
+
+    def contains_point(self, p): 
+        ss0 = sameside3d(p, self.A, self.B, self.C, self.D)
+        ss1 = sameside3d(p, self.B, self.A, self.C, self.D)
+        ss2 = sameside3d(p, self.C, self.B, self.B, self.D)
+        ss3 = sameside3d(p, self.D, self.A, self.B, self.C)
+        return all([ss0, ss1, ss2, ss3])
+
     def point_in_space(self, u, v, w):
         return self.A + u * self.AC + v * self.AB + w * self.AD
 
@@ -160,6 +201,21 @@ class Tetrahedron(Rotateable):
 
         return new_points
 
+    def shell_vis(self, eye, N=4, bottom=True):
+        result = []
+        seeA =  sameside3d(eye, self.A, self.B, self.C, self.D)
+        seeB =  sameside3d(eye, self.B, self.C, self.D, self.A)
+        seeC =  sameside3d(eye, self.C, self.D, self.A, self.B)
+        seeD =  sameside3d(eye, self.D, self.A, self.B, self.C)
+
+        if not seeD : result.extend(Tri(self.A,self.B,self.C).fill(N))
+        if not seeB : result.extend(Tri(self.A,self.C,self.D).fill(N))
+        if not seeC : result.extend(Tri(self.A,self.B,self.D).fill(N))
+        if not seeA and bottom : result.extend(Tri(self.B,self.C,self.D).fill(N))
+
+
+        return result
+
     def shell(self, N=4, bottom=True):
         result = []
         result.extend(Tri(self.A,self.B,self.C).fill(N))
@@ -175,7 +231,7 @@ class Tetrahedron(Rotateable):
 
 
 
-class Cube(Rotateable):
+class Cube(Rotateable, Obscuring):
     def __init__(self, center, half_width):
         self.center = np.array(center)
         self.middle = Tetrahedron( (-half_width,-half_width,-half_width)
@@ -211,12 +267,28 @@ class Cube(Rotateable):
         result.append(self.D.A)
         return result
 
+    def contains_point(self, p): 
+        return any(( self.middle.contains_point(p)
+                   , self.A.contains_point(p)
+                   , self.B.contains_point(p)
+                   , self.C.contains_point(p)
+                   , self.D.contains_point(p)
+                   ))
+
     def fill(self, N=4):
         result = self.middle.fill(N)
         result.extend(self.A.fill(N))
         result.extend(self.B.fill(N))
         result.extend(self.C.fill(N))
         result.extend(self.D.fill(N))
+        return result
+
+    def shell_vis(self, eye, N=4):
+        result = []
+        result.extend(self.A.shell_vis(eye, N, bottom=False))
+        result.extend(self.B.shell_vis(eye, N, bottom=False))
+        result.extend(self.C.shell_vis(eye, N, bottom=False))
+        result.extend(self.D.shell_vis(eye, N, bottom=False))
         return result
 
     def shell(self, N=4):
@@ -232,25 +304,23 @@ class Cube(Rotateable):
 
 
 if __name__=='__main__':
-    A = np.array((0,0,0))
-    B = np.array((2,0,0))
-    C = np.array((2,2,0))
 
-    p0 = np.array([2.0, 2.0, 0.0])
-    p1 = np.array([0.2, 0.2, 0.0])
-    p2 = np.array([0.7, 1.0, 0.0])
+    C = Cube(np.array([0,0,0]), 5)
 
-    T = Tri(A,B,C)
+    p0 = np.array([0.0, 0.0, 0.0])
+    p1 = np.array([7.2, 0.0, 0.0])
+    p2 = np.array([  0, 7.2, 0.0])
+    p3 = np.array([  0,   0, 7.2])
+    p4 = np.array([0.7, 1.0, 0.0])
 
-    print T.point_in_triangle(p0)
-    print T.point_in_triangle(p1)
-    print T.point_in_triangle(p2)
 
-    t = Tri(A,B,C)
-    from pprint import pprint
-    pprint(t.fill())
+    print C.contains_point(p0)
+    print C.contains_point(p1)
+    print C.contains_point(p2)
+    print C.contains_point(p3)
+    print C.contains_point(p4)
 
-    l = Line((10,0,0),(0,10,10))
-    pprint(l.fill(20))
+    print C.shell_vis(np.array([0,0,-30]))
+
 
 

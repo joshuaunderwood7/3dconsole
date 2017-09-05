@@ -13,9 +13,17 @@ import teapot
 
 
 
-N = 20
-R = 20
-squares = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , 2.0)  for _ in xrange(N) ]
+N = 8
+R = 15
+V = 1
+Size = 3
+cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
+
+# Size = 10
+# a = Size / 2.0
+# r = a * np.tan(np.pi/6.0)
+# R = a * np.tan(np.pi/3.0) - r
+# cubes = [shapes.Tetrahedron( (0,0,Size), (-r,-a,0), (-r,a,0), (R,0,0) )]
 
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,6 +37,16 @@ def visible_test(point, dist=np.float(1), vis_angle=np.float(45.0)):
     lim = calc_lim(x, dist, vis_angle)
     if -lim <= x <= lim and -lim <= y <= lim: return True
     return False
+
+def LOS_test(eye, point, shapes):
+    vector = point - eye
+    for scale in [.9]:
+        point = eye + vector * scale
+        for shape in shapes:
+            if shape.contains_point(point): 
+                return False
+    return True
+        
 
 def rotate2D(point, r_angle, origin=np.array([0.0,0.0])):
     r_rad = r_angle * np.pi / 180.0
@@ -56,7 +74,7 @@ def rotate3D(point, r_angles, origin=np.array([0.0,0.0,0.0])):
                    ])
     new_point = new_point * x_rot * y_rot * z_rot
     new_point += origin
-    return new_point
+    return new_point.A1
 
 def perspective_division(eye, point, plane_dist=1.0):
     """
@@ -67,14 +85,19 @@ def perspective_division(eye, point, plane_dist=1.0):
                       |
     """
     new_point = point - eye
-    Z = new_point[0,2]
+    Z = new_point[2]
     e = plane_dist
-    return np.array([new_point[0,0] * e/Z, new_point[0,1] * e/Z])
+    return np.array([new_point[0] * e/Z, new_point[1] * e/Z])
 
-def make_plot_points(points3d, dist = 1.0):
-    visible_points = I.ifilter(lambda p: visible_test(p, dist), points3d)
-    plot_points    = I.imap(lambda p: console_map.latlon(p[1], p[0]), visible_points)
-    return plot_points
+def make_plot_points(eye, points3d, shapes, dist = 1.0):
+
+    points = points3d
+    # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points)
+    points = I.imap(lambda p: perspective_division(eye, p, dist), points)
+    points = I.ifilter(lambda p: visible_test(p, dist), points)
+    points = I.imap(lambda p: console_map.latlon(p[1], p[0]), points)
+
+    return points
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -85,8 +108,9 @@ eye = (0.0, 0.0, -20.0)
 
 matrix_maker   = console_map.get_screen_matrix_maker(-1.0,1.0, -1.0, 1.0, HEIGHT, WIDTH)
 
-rotations = [ np.array((random.randint(-10,10),random.randint(-10,10),random.randint(-10,10))) for _ in xrange(len(squares)) ]
-zipped_rotations_and_cubes = zip(rotations, squares)
+rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
+# rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
+zipped_rotations_and_cubes = zip(rotations, cubes)
 
 
 #3Drotate the shapes
@@ -97,11 +121,8 @@ while True:
     shll_points = []
     for rotation, cube in zipped_rotations_and_cubes:
         cube.rotate3D(rotation, cube.center)
-        vert_points.extend([perspective_division(eye, point, dist) for point in cube.points()])
-        shll_points.extend([perspective_division(eye, point, dist) for point in cube.shell()])
-
-    vert_points = make_plot_points(vert_points, dist)
-    shll_points = make_plot_points(shll_points, dist)    
+        # vert_points.extend(make_plot_points(eye, cube.points(), cubes, dist))
+        shll_points.extend(make_plot_points(eye,  cube.shell_vis(eye, N=10), cubes, dist))
 
     cntr = I.count(1)
 
