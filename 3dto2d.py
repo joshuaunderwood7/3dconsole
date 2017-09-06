@@ -1,8 +1,9 @@
+import functools
 import itertools as I
 import math
+import random
 import sys
 import time
-import random
 
 import numpy as np
 import colorama
@@ -11,12 +12,13 @@ import console_map
 import shapes
 import teapot
 
+GREY_SCALE_FULL = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
+GREY_SCALE_10   = "@%#*+=-:. "
 
-
-N = 2
-R = 9
-V = 1
-Size = 4
+N = 9
+R = 20
+V = 3
+Size = 3
 cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
 
 # Size = 10
@@ -28,7 +30,7 @@ cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-def calc_lim(xy, dist=1.0, vis_angle=45.0):
+def calc_lim(xy, dist=np.float(1), vis_angle=45.0):
     lim = np.tan(vis_angle * np.pi / 180.0) * dist
     return lim
 
@@ -89,10 +91,10 @@ def perspective_division(eye, point, plane_dist=1.0):
     e = plane_dist
     return np.array([new_point[0] * e/Z, new_point[1] * e/Z])
 
-def make_plot_points(eye, points3d, shapes, dist = 1.0, zip_depth=False):
+def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
     points = points3d
-    # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points)
+    # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points) # Too slow
     points = I.imap(lambda p: perspective_division(eye, p, dist), points)
     points = I.ifilter(lambda p: visible_test(p, dist), points)
     points = I.imap(lambda p: console_map.latlon(p[1], p[0]), points)
@@ -102,6 +104,42 @@ def make_plot_points(eye, points3d, shapes, dist = 1.0, zip_depth=False):
 
     return points
 
+def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_FULL, MAX_DEPTH=20):
+    filter_lat = functools.partial(console_map._filter_mm, -1.0, 1.0)
+    filter_lon = functools.partial(console_map._filter_mm, -1.0, 1.0)
+    normalize  = console_map.__normalize(-1.0, 1.0, -1.0, 1.0)
+
+    len_grey_scale = len(grey_scale)
+    gsn_dnm = (MAX_DEPTH - eye[2]) or 1
+    bucket = dict()
+
+
+    for shape in shapes:
+        this_data = make_plot_points( eye, shape.shell_vis(eye, N=int(10))
+                                    , cubes, dist, zip_depth=True )
+        # [(depth, data)]
+        for depth, data in this_data:
+            if not (filter_lat(data.lat) and filter_lon(data.lon)) : continue
+            data = normalize(data)
+
+            index = (int((HEIGHT-1) * data.lat), int((WIDTH-1) * data.lon))
+            if bucket.get(index, MAX_DEPTH) > depth:
+                bucket.update({index:depth})
+
+    screen = [[bucket.get((i,j), MAX_DEPTH) for j in xrange(WIDTH)] for i in xrange(HEIGHT)]
+
+    for j in xrange(WIDTH):
+        for i in xrange(HEIGHT):
+            normed = (screen[i][j] - eye[2]) / (gsn_dnm)
+            index = int(normed * len_grey_scale) - 1 
+
+            if   index <  0             : index = 0
+            elif index >= len_grey_scale: index = len_grey_scale - 1
+            screen[i][j] = grey_scale[ index ]
+
+    return '\n'.join(map(lambda s: ''.join(s), reversed(screen)))
+
+
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 HEIGHT, WIDTH = console_map.get_screen_size()
@@ -109,46 +147,21 @@ HEIGHT -= 1
 dist = 1.0
 eye = (0.0, 0.0, -20.0)
 
-matrix_maker   = console_map.get_screen_matrix_maker(-1.0,1.0, -1.0, 1.0, HEIGHT, WIDTH)
 
 rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
 # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
 zipped_rotations_and_cubes = zip(rotations, cubes)
 
-layer_symbols = " #&%$|!;:+*-,."
-layer_symbols = " @#+=-:,."
-lls = len(layer_symbols)
-ldm = 2
-
-def layer(p): 
-    return int(len(layer_symbols) * (p[1] - eye[2]) / (20 - eye[2]))
 
 #3Drotate the shapes
 while True:
 
     #rotate shapes
-    vert_points = []
-    shll_points = []
     for rotation, cube in zipped_rotations_and_cubes:
         cube.rotate3D(rotation, cube.center)
-        # vert_points.extend(make_plot_points(eye, cube.points(), cubes, dist))
-        shll_points.extend(make_plot_points (eye, cube.shell_vis(eye, N=14)
-                                            , cubes, dist, zip_depth=True))
 
-    layers = [matrix_maker(vert_points, 1)]
-
-    shll_points = I.imap(lambda x: (ldm + int((lls-ldm) * (x[0] + 20.0) / 40.0), x[1]), shll_points)
-    shll_points_dict = dict((x,[]) for x in xrange(ldm,lls+ldm))
-    for k,v in shll_points:
-        shll_points_dict[k].append(v)
-
-    for k,v in shll_points_dict.items():
-        layers.append(matrix_maker(v,k))
-
-    layers.reverse()
-    smat = console_map.join_smat_layers_gen(layers)
-
-    print colorama.Cursor.POS() + console_map.print_screen_matrix_layers(smat, symbols=layer_symbols),
+    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, cubes)
+    print colorama.Cursor.POS() + vis_surface
     # time.sleep(0.1)
 
 

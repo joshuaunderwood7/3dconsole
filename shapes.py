@@ -67,6 +67,11 @@ class Line(Rotateable):
         self.A = np.array(A)
         self.B = np.array(B)
 
+        self.center = np.array(( np.mean(map(lambda x: x[0], [A,B]))
+                               , np.mean(map(lambda x: x[1], [A,B]))
+                               , np.mean(map(lambda x: x[2], [A,B]))
+                               ))
+
     def set_points(self, points):
         self.__init__(points[0], points[1])
         return self
@@ -93,6 +98,11 @@ class Tri(Rotateable, Obscuring):
 
         self.AB = self.B - self.A
         self.AC = self.C - self.A
+
+        self.center = np.array(( np.mean(map(lambda x: x[0], [A,B,C]))
+                               , np.mean(map(lambda x: x[1], [A,B,C]))
+                               , np.mean(map(lambda x: x[2], [A,B,C]))
+                               ))
 
     def set_points(self, points):
         self.__init__(points[0], points[1], points[2])
@@ -201,6 +211,7 @@ class Tetrahedron(Rotateable, Obscuring):
 
         return new_points
 
+
     def shell_vis(self, eye, N=4, bottom=True):
         result = []
         seeA =  sameside3d(eye, self.A, self.B, self.C, self.D)
@@ -213,6 +224,7 @@ class Tetrahedron(Rotateable, Obscuring):
         if not seeC : result.extend(Tri(self.A,self.B,self.D).fill(N))
         if not seeA and bottom : result.extend(Tri(self.B,self.C,self.D).fill(N))
         return result
+
 
     def shell(self, N=4, bottom=True):
         result = []
