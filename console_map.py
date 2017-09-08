@@ -79,6 +79,17 @@ def join_screen_matrix(core_smat, snd_smat):
     return [ [b or a for (a,b) in I.izip(line_a, line_b)] 
              for (line_a, line_b) in I.izip(core_smat, snd_smat) ]
 
+def join_screen_matrix_with_coords(core_smat, snd_smat):
+    coords = []
+    for i, (line_a, line_b) in enumerate(I.izip(core_smat, snd_smat)):
+        for j, (a,b) in enumerate(I.izip(line_a, line_b)):
+            if b and not a: 
+                core_smat[i][j] = 1
+                coords.append((i,j))
+
+    return core_smat, coords
+
+
 def join_screen_matrix_gen(core_smat, snd_smat):
     return ( (b or a for (a,b) in I.izip(line_a, line_b)) 
              for (line_a, line_b) in I.izip(core_smat, snd_smat) )
