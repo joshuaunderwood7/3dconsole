@@ -18,8 +18,18 @@ GREY_SCALE_10   = "@%#*+=-:. "
 N = 9
 R = 20
 V = 3
-Size = 3
-cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
+Size = 5
+# cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
+all_cubes = [ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube(( -15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
+        ]
 
 # Size = 10
 # a = Size / 2.0
@@ -104,7 +114,7 @@ def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
     return points
 
-def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_FULL, MAX_DEPTH=20):
+def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_10, MAX_DEPTH=20):
     filter_lat = functools.partial(console_map._filter_mm, -1.0, 1.0)
     filter_lon = functools.partial(console_map._filter_mm, -1.0, 1.0)
     normalize  = console_map.__normalize(-1.0, 1.0, -1.0, 1.0)
@@ -116,7 +126,7 @@ def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE
 
     for shape in shapes:
         this_data = make_plot_points( eye, shape.shell_vis(eye, N=int(10))
-                                    , cubes, dist, zip_depth=True )
+                                    , shapes, dist, zip_depth=True )
         # [(depth, data)]
         for depth, data in this_data:
             if not (filter_lat(data.lat) and filter_lon(data.lon)) : continue
@@ -147,21 +157,34 @@ HEIGHT -= 1
 dist = 1.0
 eye = (0.0, 0.0, -20.0)
 
-
-rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
-# rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
-zipped_rotations_and_cubes = zip(rotations, cubes)
-
-
 #3Drotate the shapes
-while True:
-
+def run():
     #rotate shapes
     for rotation, cube in zipped_rotations_and_cubes:
         cube.rotate3D(rotation, cube.center)
 
     vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, cubes)
+
     print colorama.Cursor.POS() + vis_surface
-    # time.sleep(0.1)
+    #time.sleep(0.1)
+
+while True:
+    cubes = random.sample([ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Cube(( -15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
+        ], 2)
+    rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
+    # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
+    zipped_rotations_and_cubes = zip(rotations, cubes)
+    for _ in xrange(random.randint(100, 500)):
+        run()
+
+
 
 

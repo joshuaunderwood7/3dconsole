@@ -76,26 +76,29 @@ def get_screen_matrix(lat_min, lat_max, lon_min, lon_max, height, width, data, l
     return screen
 
 def join_screen_matrix(core_smat, snd_smat):
-    return [ [b or a for (a,b) in I.izip(line_a, line_b)] 
+    return [ [max(b,a) for (a,b) in I.izip(line_a, line_b)] 
              for (line_a, line_b) in I.izip(core_smat, snd_smat) ]
 
-def join_screen_matrix_with_coords(core_smat, snd_smat):
+def join_screen_matrix_with_coords(orig_smat, new_smat):
     coords = []
-    for i, (line_a, line_b) in enumerate(I.izip(core_smat, snd_smat)):
+    for i, (line_a, line_b) in enumerate(I.izip(orig_smat, new_smat)):
         for j, (a,b) in enumerate(I.izip(line_a, line_b)):
-            if b and not a: 
-                core_smat[i][j] = 1
+            if b > a:
+                orig_smat[i][j] = b
                 coords.append((i,j))
 
-    return core_smat, coords
+    return orig_smat, coords
 
+
+def matrix_move_layer_gen(smat, by):
+    return ( (a + by if a > 0 else 0 for a in line) for line in smat )
 
 def join_screen_matrix_gen(core_smat, snd_smat):
-    return ( (b or a for (a,b) in I.izip(line_a, line_b)) 
+    return ( (max(b,a) for (a,b) in I.izip(line_a, line_b)) 
              for (line_a, line_b) in I.izip(core_smat, snd_smat) )
-
 def join_smat_layers_gen(layers):
     return reduce( join_screen_matrix_gen, layers)
+
 
 def print_screen_matrix(screen_matrix, symbol='.', filler=' '):
     return '\n'.join(( ''.join( (symbol if B else filler for B in line) )
