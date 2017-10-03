@@ -162,12 +162,14 @@ def run():
     #rotate shapes
     for rotation, cube in zipped_rotations_and_cubes:
         cube.rotate3D(rotation, cube.center)
+        # cube.rotate3D_qua(rotation, cube.center)
 
     vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, cubes)
 
     print colorama.Cursor.POS() + vis_surface
     #time.sleep(0.1)
 
+Number_of_Cubes = 2
 while True:
     cubes = random.sample([ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
@@ -178,7 +180,7 @@ while True:
         , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
         , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
-        ], 2)
+        ], Number_of_Cubes)
     rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
     # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
     zipped_rotations_and_cubes = zip(rotations, cubes)
