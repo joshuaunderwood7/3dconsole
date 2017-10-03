@@ -62,6 +62,18 @@ def get_screen_matrix_maker(lat_min, lat_max, lon_min, lon_max, height, width):
         return screen
     return __get_screen_maxrix
 
+def get_screen_matrix_coord(lat_min, lat_max, lon_min, lon_max, height, width, data, layer=1):
+    filter_lat = functools.partial(_filter_mm, lat_min, lat_max)
+    filter_lon = functools.partial(_filter_mm, lon_min, lon_max)
+    normalize  = __normalize(lat_min, lat_max, lon_min, lon_max)
+
+    this_data = I.ifilter(lambda d: filter_lat(d.lat) and filter_lon(d.lon), data)
+    this_data = I.imap(normalize, this_data)
+    coords = [ ( int((height-1) * d.lat), int((width-1) * d.lon) )
+               for d in this_data
+             ]
+    return coords
+
 def get_screen_matrix(lat_min, lat_max, lon_min, lon_max, height, width, data, layer=1):
     filter_lat = functools.partial(_filter_mm, lat_min, lat_max)
     filter_lon = functools.partial(_filter_mm, lon_min, lon_max)
