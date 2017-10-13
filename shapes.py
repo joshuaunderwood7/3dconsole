@@ -2,7 +2,7 @@ import abc
 import numpy as np
 from itertools import product, ifilter, izip
 
-from quaternion import Quaternion
+from quaternion import Quaternion, Q
 
 def sameside3d(p, ref, A,B,C ):
     cpAB_BC = np.cross(A - B, A - C)
@@ -34,16 +34,16 @@ class Rotateable():
 
     def rotate3D_qua(self, r_angles, origin=np.array([0.0,0.0,0.0])):
         " Rotate the shape by [x,y,z] degrees about origin of [x,y,x], using quaternions"
-        x_axis_unit = (1,0,0)
-        y_axis_unit = (0,1,0)
-        z_axis_unit = (0,0,1)
-        q_single = Quaternion()
-
         r_rads = r_angles * np.pi / np.float(180.0)
-        xq = q_single.from_axisangle(r_rads[0], x_axis_unit)
-        yq = q_single.from_axisangle(r_rads[1], y_axis_unit)
-        zq = q_single.from_axisangle(r_rads[2], z_axis_unit)
-        new_points = [ (origin + (zq * yq * xq * (point - origin)))
+
+        axis_unit = ( np.cos(r_angles[0])
+                    , np.sin(r_angles[0]) * np.cos(r_angles[1])
+                    , np.sin(r_angles[0]) * np.sin(r_angles[1])
+                    )
+
+        rot_q = Q.from_axisangle(r_rads[2], axis_unit)
+
+        new_points = [ (origin + (rot_q * (point - origin)))
                        for point in self.points() 
                      ]
         self.set_points(new_points)

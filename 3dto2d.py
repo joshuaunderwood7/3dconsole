@@ -40,15 +40,11 @@ all_cubes = [ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-def calc_lim(xy, dist=np.float(1), vis_angle=45.0):
-    lim = np.tan(vis_angle * np.pi / 180.0) * dist
-    return lim
-
 def visible_test(point, dist=np.float(1), vis_angle=np.float(45.0)):
-    x,y = point
-    lim = calc_lim(x, dist, vis_angle)
-    if -lim <= x <= lim and -lim <= y <= lim: return True
+    _lim = np.tan(45.0 * np.pi / 180.0) * dist
+    if -_lim <= point[0] <= _lim and -_lim <= point[1] <= _lim: return True
     return False
+
 
 def LOS_test(eye, point, shapes):
     vector = point - eye
@@ -69,24 +65,8 @@ def rotate2D(point, r_angle, origin=np.array([0.0,0.0])):
     new_point += origin
     return new_point
 
-def rotate3D(point, r_angles, origin=np.array([0.0,0.0,0.0])):
-    r_rads = r_angles * np.pi / np.float(180.0)
-    new_point = point - origin
-    x_rot = np.mat([ [                1.0,                0.0,                0.0]
-                   , [                0.0,  np.cos(r_rads[0]), -np.sin(r_rads[0])]
-                   , [                0.0,  np.sin(r_rads[0]),  np.cos(r_rads[0])]
-                   ])
-    y_rot = np.mat([ [  np.cos(r_rads[1]),                 0.0,  np.sin(r_rads[1])]
-                   , [                0.0,                 1.0,                0.0]
-                   , [ -np.sin(r_rads[1]),                 0.0,  np.cos(r_rads[1])]
-                   ])
-    z_rot = np.mat([ [  np.cos(r_rads[2]), -np.sin(r_rads[2]),                 0.0]
-                   , [  np.sin(r_rads[2]),  np.cos(r_rads[2]),                 0.0]
-                   , [                0.0,                0.0,                 1.0]
-                   ])
-    new_point = new_point * x_rot * y_rot * z_rot
-    new_point += origin
-    return new_point.A1
+# def rotate3D(point, r_angles, origin=np.array([0.0,0.0,0.0])):
+#Moved to shapes.py
 
 def perspective_division(eye, point, plane_dist=1.0):
     """
@@ -99,15 +79,26 @@ def perspective_division(eye, point, plane_dist=1.0):
     new_point = point - eye
     Z = new_point[2]
     e = plane_dist
-    return np.array([new_point[0] * e/Z, new_point[1] * e/Z])
+    return (new_point * e/Z)[:2]
+
+def perspective_division_group(eye, points, plane_dist=1.0):
+    new_points = points - eye
+    Z = new_points[:, 2]
+    e = plane_dist
+    return (new_points.T * (e/Z)).T[:, [0,1]]
+
 
 def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
-    points = points3d
+
+    points = perspective_division_group(eye, np.array(points3d))
+
     # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points) # Too slow
-    points = I.imap(lambda p: perspective_division(eye, p, dist), points)
-    points = I.ifilter(lambda p: visible_test(p, dist), points)
-    points = I.imap(lambda p: console_map.latlon(p[1], p[0]), points)
+
+    _lim = np.float(np.tan(45.0 * np.pi / 180.0) * dist)
+    points = (console_map.latlon(x,y) for (x,y) in points)
+    # points = (console_map.latlon(x,y) for (x,y) in points 
+            # if -_lim <= x <= _lim and -_lim <= y <= _lim)
 
     if zip_depth:
         points = I.izip(I.imap(lambda z: z[2], points3d), points)
@@ -169,7 +160,8 @@ def run():
     print colorama.Cursor.POS() + vis_surface
     #time.sleep(0.1)
 
-Number_of_Cubes = 2
+Number_of_Cubes = 3
+# for _ in range(5):
 while True:
     cubes = random.sample([ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
@@ -184,7 +176,7 @@ while True:
     rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
     # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
     zipped_rotations_and_cubes = zip(rotations, cubes)
-    for _ in xrange(random.randint(100, 500)):
+    for _ in xrange(random.randint(30,80)):
         run()
 
 

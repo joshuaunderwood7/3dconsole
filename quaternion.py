@@ -83,3 +83,5 @@ class Quaternion:
         w, v = self.get_axisangle()
         return np.linalg.norm(v)
 
+Q = Quaternion()
+
