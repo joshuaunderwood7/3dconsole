@@ -19,12 +19,13 @@ def sameside3d(p, ref, A,B,C ):
 
     return False
 
+
 class Rotateable():
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def points(self): 
-        " Return contructable points in a list. "
+        " Return constructible points in a list. "
         pass
 
     @abc.abstractmethod
@@ -66,9 +67,9 @@ class Rotateable():
                        , [                0.0,                0.0,                 1.0]
                        ])
         rot_matrix = x_rot * y_rot * z_rot
-        new_points = [ (origin + (point - origin) * rot_matrix).A1 
-                       for point in self.points() 
-                     ]
+        new_points = np.array([ (origin + (point - origin) * rot_matrix).A1 
+                                for point in self.points() 
+                              ])
         self.set_points(new_points)
         return self
 
@@ -171,7 +172,7 @@ class Tri(Rotateable, Obscuring):
 
         return new_points
 
-    def __repr__(self):
+    def __str__(self):
         return "{},{},{}".format(self.A, self.B, self.C)
 
 
@@ -255,9 +256,67 @@ class Tetrahedron(Rotateable, Obscuring):
         return result
 
 
-    def __repr__(self):
+    def __str__(self):
         return "{},{},{},{}".format(self.A, self.B, self.C, self.D)
 
+
+class Sphere(Rotateable, Obscuring):
+    def __init__(self, center, radius, N=12):
+        self.center  = np.array(center)
+        self.radius  = np.array(radius)
+        self._points = self.points(N, initilize=True)
+
+    def points(self, N=5, initilize=False): 
+        " Return constructible points in a list. "
+        if not initilize: return self._points
+
+        lats = np.array(np.linspace(-np.pi/2, np.pi/2, N))
+        lons = np.array(np.linspace(  -np.pi,   np.pi, N))
+
+        result = np.ndarray(shape=(len(lats) * len(lons), 3), dtype=np.float32)
+
+        for (ii, (lat, lon)) in enumerate(product(lats, lons)):
+            result[ii] = np.array(( self.radius * np.cos(lat) * np.cos(lon)
+                                  , self.radius * np.cos(lat) * np.sin(lon)
+                                  , self.radius * np.sin(lat)
+                                  )) + self.center
+        return result
+
+    def set_points(self, points):
+        " Construct shape from list of points. "
+        self._points = points
+        return self
+
+    def contains_point(self, point):
+        " Test if point is within the shape. "
+        return np.linalg.norm(point-center) < self.radius
+
+    def fill(self, N=5):
+        return self.points(N)
+
+    def shell_vis(self, eye, N=5):
+        np_eye = np.array(eye)
+        dist = np.linalg.norm(self.center - np_eye)
+        return [ point for point in self.points(N) if np.linalg.norm(point - np_eye) < dist ]
+
+    def shell(self, N=5):
+        return self.points(N)
+
+    def clear_points(self):
+        self._points = []
+        return self
+
+    def set_lat_lon_points(self, lat_lon_points):
+        self._points = np.ndarray(shape=(len(lat_lon_points), 3), dtype=np.float32)
+        for (ii, point) in enumerate(lat_lon_points):
+            self._points[ii] = np.array(( self.radius * np.cos(point.lat * np.pi/180.0) * np.cos(point.lon * np.pi/180.0)
+                                        , self.radius * np.cos(point.lat * np.pi/180.0) * np.sin(point.lon * np.pi/180.0)
+                                        , self.radius * np.sin(point.lat * np.pi/180.0)
+                                        )) + self.center
+        return self
+
+    def __str__(self):
+        return "{} {} {}".format(self.center, self.radius, self.points())
 
 
 class Cube(Rotateable, Obscuring):
@@ -328,28 +387,32 @@ class Cube(Rotateable, Obscuring):
         result.extend(self.D.shell(N, bottom=False))
         return result
 
-    def __repr__(self):
+    def __str__(self):
         return "{}".format(self.points())
 
 
 if __name__=='__main__':
 
-    C = Cube(np.array([0,0,0]), 5)
+    S = Sphere((0,0,0), 5)
 
-    p0 = np.array([0.0, 0.0, 0.0])
-    p1 = np.array([7.2, 0.0, 0.0])
-    p2 = np.array([  0, 7.2, 0.0])
-    p3 = np.array([  0,   0, 7.2])
-    p4 = np.array([0.7, 1.0, 0.0])
+    print S
+
+    # C = Cube(np.array([0,0,0]), 5)
+
+    # p0 = np.array([0.0, 0.0, 0.0])
+    # p1 = np.array([7.2, 0.0, 0.0])
+    # p2 = np.array([  0, 7.2, 0.0])
+    # p3 = np.array([  0,   0, 7.2])
+    # p4 = np.array([0.7, 1.0, 0.0])
 
 
-    print C.contains_point(p0)
-    print C.contains_point(p1)
-    print C.contains_point(p2)
-    print C.contains_point(p3)
-    print C.contains_point(p4)
+    # print C.contains_point(p0)
+    # print C.contains_point(p1)
+    # print C.contains_point(p2)
+    # print C.contains_point(p3)
+    # print C.contains_point(p4)
 
-    print C.shell_vis(np.array([0,0,-30]))
+    # print C.shell_vis(np.array([0,0,-30]))
 
 
 

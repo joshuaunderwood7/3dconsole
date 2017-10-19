@@ -19,23 +19,17 @@ N = 9
 R = 20
 V = 3
 Size = 5
-# cubes = [ shapes.Cube((random.randint(-R,R),random.randint(-R,R),random.randint(-R,R)) , Size)  for _ in xrange(N) ]
 all_cubes = [ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
-        , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
-        , shapes.Cube((  15 , -15 , random.randint(0,R)) , Size)
-        , shapes.Cube(( -15 ,   0 , random.randint(0,R)) , Size)
-        , shapes.Cube((   0 ,   0 , random.randint(0,R)) , Size)
-        , shapes.Cube((  15 ,   0 , random.randint(0,R)) , Size)
-        , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
-        , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
-        , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
-        ]
+            , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
+            , shapes.Cube((  15 , -15 , random.randint(0,R)) , Size)
+            , shapes.Cube(( -15 ,   0 , random.randint(0,R)) , Size)
+            , shapes.Cube((   0 ,   0 , random.randint(0,R)) , Size)
+            , shapes.Cube((  15 ,   0 , random.randint(0,R)) , Size)
+            , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
+            , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
+            , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
+            ]
 
-# Size = 10
-# a = Size / 2.0
-# r = a * np.tan(np.pi/6.0)
-# R = a * np.tan(np.pi/3.0) - r
-# cubes = [shapes.Tetrahedron( (0,0,Size), (-r,-a,0), (-r,a,0), (R,0,0) )]
 
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -82,6 +76,7 @@ def perspective_division(eye, point, plane_dist=1.0):
     return (new_point * e/Z)[:2]
 
 def perspective_division_group(eye, points, plane_dist=1.0):
+    if len(points) < 1: return points
     new_points = points - eye
     Z = new_points[:, 2]
     e = plane_dist
@@ -89,8 +84,6 @@ def perspective_division_group(eye, points, plane_dist=1.0):
 
 
 def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
-
-
     points = perspective_division_group(eye, np.array(points3d))
 
     # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points) # Too slow
@@ -148,22 +141,54 @@ HEIGHT -= 1
 dist = 1.0
 eye = (0.0, 0.0, -20.0)
 
+
+ROTATION = (1,0,0)
+sphere = shapes.Sphere((0,0,0), 12, 12)
+
+data      = [  console_map.latlon(R, 0) for R in np.linspace(-90, 90)]
+data.extend([console_map.latlon(R, 180) for R in np.linspace(-90, 90)])
+sphere.set_lat_lon_points(data)
+
+# sys.path.append('/home/underwood/code/gshhg/')
+# import GSHHG
+# polygons = []
+# with open('/home/underwood/code/gshhg/gshhg-bin-2.3.7/gshhs_c.b') as infile:
+    # while infile.read(1):
+        # infile.seek(-1,1)
+        # polygons.append(GSHHG.receive_polygon(infile))
+# data = []
+# for ii, polygon in enumerate(polygons):
+    # data.extend([console_map.latlon(p.y, p.x) for p in  polygon[1]])
+    # if ii > 0: break
+# sphere.set_lat_lon_points(data)
+
+
+sphere.rotate3D(np.array((0,-90,0)), sphere.center)
+while True:
+    shape_list  = [sphere]
+    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, shape_list)
+    print colorama.Cursor.POS() + vis_surface
+    sphere.rotate3D(np.array(ROTATION), sphere.center)
+
+
+sys.exit()
+
 #3Drotate the shapes
 def run():
     #rotate shapes
-    for rotation, cube in zipped_rotations_and_cubes:
+    for rotation, cube in zipped_rotations_and_shapes:
         cube.rotate3D(rotation, cube.center)
         # cube.rotate3D_qua(rotation, cube.center)
 
-    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, cubes)
+    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, shape_list)
 
     print colorama.Cursor.POS() + vis_surface
     #time.sleep(0.1)
 
-Number_of_Cubes = 3
-# for _ in range(5):
+Number_of_Shapes = 3
 while True:
-    cubes = random.sample([ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
+    shape_list = random.sample(
+        [ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube((  15 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube(( -15 ,   0 , random.randint(0,R)) , Size)
@@ -172,10 +197,19 @@ while True:
         , shapes.Cube(( -15 ,  15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 ,  15 , random.randint(0,R)) , Size)
         , shapes.Cube((  15 ,  15 , random.randint(0,R)) , Size)
-        ], Number_of_Cubes)
-    rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(cubes)) ]
-    # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(cubes))]
-    zipped_rotations_and_cubes = zip(rotations, cubes)
+        , shapes.Sphere(( -15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Sphere((   0 , -15 , random.randint(0,R)) , Size)
+        , shapes.Sphere((  15 , -15 , random.randint(0,R)) , Size)
+        , shapes.Sphere(( -15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Sphere((   0 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Sphere((  15 ,   0 , random.randint(0,R)) , Size)
+        , shapes.Sphere(( -15 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Sphere((   0 ,  15 , random.randint(0,R)) , Size)
+        , shapes.Sphere((  15 ,  15 , random.randint(0,R)) , Size)
+        ], Number_of_Shapes)
+    rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(shape_list)) ]
+    # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(shape_list))]
+    zipped_rotations_and_shapes = zip(rotations, shape_list)
     for _ in xrange(random.randint(30,80)):
         run()
 
