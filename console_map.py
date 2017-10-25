@@ -144,8 +144,10 @@ class Polygon():
     def raster(self, N=10):
         self.points = list(self.points)
         new_points = []
+        #Connect the dots
         for p0, p1 in zip(self.points[:-1], self.points[1:]):
             new_points.extend(interpolate(p0, p1, N))
+        #Connect end to beginning
         new_points.extend(interpolate(self.points[-1], self.points[0], N))
         self.points = new_points
         return self
