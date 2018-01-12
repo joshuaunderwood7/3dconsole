@@ -138,16 +138,17 @@ def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE
 
 HEIGHT, WIDTH = console_map.get_screen_size()
 HEIGHT -= 1
+WIDTH = HEIGHT * 2
 dist = 1.0
 eye = (0.0, 0.0, -20.0)
 
 
-ROTATION = (1,0,0)
+ROTATION = (1,1,0)
 sphere = shapes.Sphere((0,0,0), 12, 12)
 
 data      = [  console_map.latlon( 30, R) for R in np.linspace(-180, 180)]
 data.extend([  console_map.latlon(-30, R) for R in np.linspace(-180, 180)])
-data.extend([console_map.latlon(R, 180) for R in np.linspace(-90, 90)])
+data.extend([console_map.latlon(R, 0) for R in np.linspace(-90, 90)])
 sphere.set_lat_lon_points(data)
 
 # sys.path.append('/home/underwood/code/gshhg/')
