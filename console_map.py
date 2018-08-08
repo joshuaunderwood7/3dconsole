@@ -1,6 +1,7 @@
 import functools
 import os
 import itertools as I
+from exceptions import IndexError
 
 class latlon():
     def __init__(self, lat, lon):
@@ -11,6 +12,11 @@ class latlon():
 
     def __repr__(self):
         return '({}, {})'.format(self.lat, self.lon)
+
+    def __getitem__(self,n):
+        if n == 0: return self.lat
+        if n == 1: return self.lon
+        raise IndexError
 
 def _filter_mm(min, max, x): return min <= x <= max
 
@@ -138,8 +144,9 @@ def interpolate(p0, p1, N=10):
     
  
 class Polygon():
-    def __init__(self, points):
-        self.points = points
+    def __init__(self, points, connect_ends=True):
+        self.points       = points
+        self.connect_ends = connect_ends
 
     def raster(self, N=10):
         self.points = list(self.points)
@@ -147,8 +154,11 @@ class Polygon():
         #Connect the dots
         for p0, p1 in zip(self.points[:-1], self.points[1:]):
             new_points.extend(interpolate(p0, p1, N))
+
         #Connect end to beginning
-        new_points.extend(interpolate(self.points[-1], self.points[0], N))
+        if self.connect_ends:
+            new_points.extend(interpolate(self.points[-1], self.points[0], N))
+
         self.points = new_points
         return self
 
@@ -158,6 +168,11 @@ class Polygon():
     def __repr__(self):
         return repr(self.points)
 
+class Line(Polygon):
+    def __init__(self, points, connect_ends=False):
+        self.points       = points
+        self.connect_ends = connect_ends
+
 
 if __name__=='__main__':
     lat_min, lat_max = 0,10
@@ -165,11 +180,18 @@ if __name__=='__main__':
     height = 48
     width  = 160
 
+
     poly = Polygon([latlon(0,0), latlon(0,3), latlon(3,7), latlon(10,10), latlon(9,5)]) 
+    line = Line([latlon(0,0), latlon(3,7), latlon(9,5)]) 
+
+    line.raster(N=100)
+    data = line.points
+    print print_screen(lat_min, lat_max, lon_min, lon_max, height, width, 
+            data, symbol='-', filler=' ')
 
     poly.raster(N=100)
-
     data = poly.points
     print print_screen(lat_min, lat_max, lon_min, lon_max, height, width, 
             data, symbol='-', filler=' ')
+
 

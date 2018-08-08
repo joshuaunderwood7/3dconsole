@@ -12,6 +12,9 @@ import console_map
 import shapes
 import teapot
 
+import multiprocessing
+
+
 GREY_SCALE_FULL = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
 GREY_SCALE_10   = "@%#*+=-:. "
 
@@ -98,21 +101,28 @@ def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
     return points
 
+
+init_SCREEN = True
+SCREEN = None
 def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_10, MAX_DEPTH=20):
+    global SCREEN, init_SCREEN
+    if init_SCREEN: 
+        SCREEN = np.zeros(shape=(HEIGHT, WIDTH), dtype='|S1')
+        init_SCREEN = False
+
+    len_grey_scale = len(grey_scale)
+    gsn_dnm = (MAX_DEPTH - eye[2]) or 1
+
     filter_lat = functools.partial(console_map._filter_mm, -1.0, 1.0)
     filter_lon = functools.partial(console_map._filter_mm, -1.0, 1.0)
     normalize  = console_map.__normalize(-1.0, 1.0, -1.0, 1.0)
 
-    len_grey_scale = len(grey_scale)
-    gsn_dnm = (MAX_DEPTH - eye[2]) or 1
     bucket = dict()
-
-
     for shape in shapes:
-        this_data = make_plot_points( eye, shape.shell_vis(eye, N=int(10))
-                                    , shapes, dist, zip_depth=True )
-        # [(depth, data)]
-        for depth, data in this_data:
+        shape_data = make_plot_points( eye, shape.shell_vis(eye, N=int(10))
+                                     , shapes, dist, zip_depth=True 
+                                     )
+        for depth, data in shape_data:
             if not (filter_lat(data.lat) and filter_lon(data.lon)) : continue
             data = normalize(data)
 
@@ -120,75 +130,73 @@ def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE
             if bucket.get(index, MAX_DEPTH) > depth:
                 bucket.update({index:depth})
 
-    screen = [[bucket.get((i,j), MAX_DEPTH) for j in xrange(WIDTH)] for i in xrange(HEIGHT)]
-
     for j in xrange(WIDTH):
         for i in xrange(HEIGHT):
-            normed = (screen[i][j] - eye[2]) / (gsn_dnm)
-            index = int(normed * len_grey_scale) - 1 
+            data   = bucket.get((i,j), MAX_DEPTH)
+            normed = (data - eye[2]) / (gsn_dnm)
+            index  = int(normed * len_grey_scale) - 1 
 
             if   index <  0             : index = 0
             elif index >= len_grey_scale: index = len_grey_scale - 1
-            screen[i][j] = grey_scale[ index ]
+            SCREEN[i][j] = grey_scale[ index ]
 
-    return '\n'.join(map(lambda s: ''.join(s), reversed(screen)))
+    return '\n'.join(map(lambda s: ''.join(s), reversed(SCREEN)))
 
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 HEIGHT, WIDTH = console_map.get_screen_size()
 HEIGHT -= 1
-WIDTH = HEIGHT * 2
+# WIDTH = HEIGHT * 2
 dist = 1.0
 eye = (0.0, 0.0, -20.0)
+__POOL__=multiprocessing.Pool(multiprocessing.cpu_count())
 
 
-ROTATION = (1,1,0)
-sphere = shapes.Sphere((0,0,0), 12, 12)
+# ROTATION = (1,1,0)
+# sphere = shapes.Sphere((0,0,0), 12, 12)
 
-data      = [  console_map.latlon( 30, R) for R in np.linspace(-180, 180)]
-data.extend([  console_map.latlon(-30, R) for R in np.linspace(-180, 180)])
-data.extend([console_map.latlon(R, 0) for R in np.linspace(-90, 90)])
-sphere.set_lat_lon_points(data)
-
-# sys.path.append('/home/underwood/code/gshhg/')
-# import GSHHG
-# polygons = []
-# with open('/home/underwood/code/gshhg/gshhg-bin-2.3.7/gshhs_c.b') as infile:
-    # while infile.read(1):
-        # infile.seek(-1,1)
-        # polygons.append(GSHHG.receive_polygon(infile))
-# data = []
-# for ii, polygon in enumerate(polygons):
-    # data.extend([console_map.latlon(p.y, p.x) for p in  polygon[1]])
-    # if ii > 0: break
+# data      = [  console_map.latlon( 30, R) for R in np.linspace(-180, 180)]
+# data.extend([  console_map.latlon(-30, R) for R in np.linspace(-180, 180)])
+# data.extend([console_map.latlon(R, 0) for R in np.linspace(-90, 90)])
 # sphere.set_lat_lon_points(data)
 
+# # sys.path.append('/home/underwood/code/gshhg/')
+# # import GSHHG
+# # polygons = []
+# # with open('/home/underwood/code/gshhg/gshhg-bin-2.3.7/gshhs_c.b') as infile:
+    # # while infile.read(1):
+        # # infile.seek(-1,1)
+        # # polygons.append(GSHHG.receive_polygon(infile))
+# # data = []
+# # for ii, polygon in enumerate(polygons):
+    # # data.extend([console_map.latlon(p.y, p.x) for p in  polygon[1]])
+    # # if ii > 0: break
+# # sphere.set_lat_lon_points(data)
 
-sphere.rotate3D(np.array((0,-90,0)), sphere.center)
-while True:
-    shape_list  = [sphere]
-    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, shape_list)
-    print colorama.Cursor.POS() + vis_surface
-    sphere.rotate3D(np.array(ROTATION), sphere.center)
+
+# sphere.rotate3D(np.array((0,-90,0)), sphere.center)
+# while True:
+    # shape_list  = [sphere]
+    # vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, shape_list)
+    # print colorama.Cursor.POS() + vis_surface
+    # sphere.rotate3D(np.array(ROTATION), sphere.center)
 
 
-sys.exit()
+# sys.exit()
 
 #3Drotate the shapes
-def run():
-    #rotate shapes
-    for rotation, cube in zipped_rotations_and_shapes:
-        cube.rotate3D(rotation, cube.center)
-        # cube.rotate3D_qua(rotation, cube.center)
-
-    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, shape_list)
-
+def run(shapes):
+    new_shapes = [shape.rotate3D_qua() for shape in shapes]
+    # new_shapes = (shape.rotate3D() for shape in shapes)
+    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, new_shapes)
     print colorama.Cursor.POS() + vis_surface
-    #time.sleep(0.1)
 
-Number_of_Shapes = 3
-while True:
+
+Number_of_Shapes = 4
+max_loops = 20
+while max_loops > 0 or max_loops == -42:
+    max_loops -= 1 if max_loops != -42 else 0
     shape_list = random.sample(
         [ shapes.Cube(( -15 , -15 , random.randint(0,R)) , Size)
         , shapes.Cube((   0 , -15 , random.randint(0,R)) , Size)
@@ -209,12 +217,13 @@ while True:
         , shapes.Sphere((   0 ,  15 , random.randint(0,R)) , Size)
         , shapes.Sphere((  15 ,  15 , random.randint(0,R)) , Size)
         ], Number_of_Shapes)
-    rotations = [ np.array((random.randint(-V,V),random.randint(-V,V),random.randint(-V,V))) for _ in xrange(len(shape_list)) ]
-    # rotations = [np.array([1.1, 1.3, 0]) for _ in xrange(len(shape_list))]
-    zipped_rotations_and_shapes = zip(rotations, shape_list)
-    for _ in xrange(random.randint(30,80)):
-        run()
+    for shape in shape_list:
+        shape.setOrigin(shape.center)
+        shape.setRotationVector((random.random(),random.random(),random.random()))
+        shape.setRotationAngle(random.randint(5,20))
+        shape.setRotationEucAngles((0,0,10))
 
-
+    for _ in xrange(50):
+        run(shape_list)
 
 

@@ -9,7 +9,6 @@ def normalize(v, tolerance=0.00001):
     return np.array(v)
 
 class Quaternion:
-
     def from_axisangle(self, theta, v):
         theta = theta
         v = normalize(v)
@@ -20,8 +19,11 @@ class Quaternion:
 
     def from_value(self, value):
         new_quaternion = Quaternion()
-        new_quaternion._val = value
+        new_quaternion._val = np.array(value)
         return new_quaternion
+
+    def get_point(self):
+        return self._val[1:]
 
     def _axisangle_to_q(self, theta, v):
         x = v[0]
@@ -49,10 +51,10 @@ class Quaternion:
     def _multiply_with_quaternion(self, q2):
         w1, x1, y1, z1 = self._val
         w2, x2, y2, z2 = q2._val
-        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-        y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
-        z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+        w = (w1 * w2) - (x1 * x2) - (y1 * y2) - (z1 * z2)
+        x = (w1 * x2) + (x1 * w2) + (y1 * z2) - (z1 * y2)
+        y = (w1 * y2) + (y1 * w2) + (z1 * x2) - (x1 * z2)
+        z = (w1 * z2) + (z1 * w2) + (x1 * y2) - (y1 * x2)
 
         result = self.from_value(np.array((w, x, y, z)))
         return result
@@ -67,8 +69,9 @@ class Quaternion:
         return result
 
     def __repr__(self):
-        theta, v = self.get_axisangle()
-        return "((%.6f; %.6f, %.6f, %.6f))" % (theta, v[0], v[1], v[2])
+        return str(self._val)
+        # theta, v = self.get_axisangle()
+        # return "((%.6f; %.6f, %.6f, %.6f))" % (theta, v[0], v[1], v[2])
 
     def get_axisangle(self):
         w, v = self._val[0], self._val[1:]
@@ -84,4 +87,19 @@ class Quaternion:
         return np.linalg.norm(v)
 
 Q = Quaternion()
+
+def rotate_point(point3D, rotation_vector, rotation_angle_rad):
+    q_value = np.insert(np.array(point3D), 0, 0., axis=0)
+    point_q = Q.from_value(q_value)
+    rot_vec = Q.from_axisangle(rotation_angle_rad, rotation_vector)
+    resultQ = rot_vec * point_q * rot_vec.get_conjugate()
+    return resultQ.get_point()
+
+if __name__=="__main__":
+    point = [1,0,0]
+    r_vec = [0,0,1]
+    for angle in np.linspace(0,np.pi):
+        print rotate_point(point, r_vec, angle)
+
+
 

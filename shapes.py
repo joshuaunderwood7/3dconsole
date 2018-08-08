@@ -1,8 +1,9 @@
 import abc
 import numpy as np
-from itertools import product, ifilter, izip
+from itertools import product, ifilter, izip, repeat
 
-from quaternion import Quaternion, Q
+from quaternion import rotate_point, Q
+import multiprocessing
 
 def sameside3d(p, ref, A,B,C ):
     cpAB_BC = np.cross(A - B, A - C)
@@ -19,6 +20,17 @@ def sameside3d(p, ref, A,B,C ):
 
     return False
 
+def _mappable_rotate3D_qua(p_shape):
+    point, shape  = p_shape
+    return shape.origin + ( rotate_point( point - shape.origin
+                                        , shape.rotation_vector
+                                        , shape.qua_rads
+                                        ) )
+
+def _mappable_rotate3D(p_shape):
+    point, shape  = p_shape
+    return (shape.origin + (point - shape.origin) * shape.rot_matrix).A1 
+
 
 class Rotateable():
     __metaclass__ = abc.ABCMeta
@@ -33,45 +45,53 @@ class Rotateable():
         " Construct shape from list of points. "
         pass
 
-    def rotate3D_qua(self, r_angles, origin=np.array([0.0,0.0,0.0])):
-        " Rotate the shape by [x,y,z] degrees about origin of [x,y,x], using quaternions"
-        r_rads = r_angles * np.pi / np.float(180.0)
+    def __mappable_points(self):
+        return izip(self.points(), repeat(self))
 
-        axis_unit = ( np.cos(r_angles[0])
-                    , np.sin(r_angles[0]) * np.cos(r_angles[1])
-                    , np.sin(r_angles[0]) * np.sin(r_angles[1])
-                    )
+    def setRotationVector(self, rv): 
+        self.rotation_vector = np.array(rv)
 
-        rot_q = Q.from_axisangle(r_rads[2], axis_unit)
+    def setRotationAngle(self, ra): 
+        self.rotation_angle = ra
+        self.qua_rads = ra * np.pi / np.float(180.0)
 
-        new_points = [ (origin + (rot_q * (point - origin)))
-                       for point in self.points() 
-                     ]
+    def setRotationEucAngles(self, ea): 
+        self.rotation_angle_euc = np.array(ea)
+        self.euc_rads = self.rotation_angle_euc * np.pi / np.float(180.0)
+        self.euc_diff = True
+
+    def setOrigin(self, origin): 
+        self.origin = np.array(origin)
+
+    def rotate3D_qua(self):
+        " Rotate the shape by degrees about axis_vector of rotation placed at origin of [x,y,x], using quaternions"
+        new_points = __POOL__.map(_mappable_rotate3D_qua, self.__mappable_points())
         self.set_points(new_points)
         return self
             
 
-    def rotate3D(self, r_angles, origin=np.array([0.0,0.0,0.0])):
+    def rotate3D(self):
         " Rotate the shape by [x,y,z] degrees about origin of [x,y,x]. "
-        r_rads = r_angles * np.pi / np.float(180.0)
-        x_rot = np.mat([ [                1.0,                0.0,                0.0]
-                       , [                0.0,  np.cos(r_rads[0]), -np.sin(r_rads[0])]
-                       , [                0.0,  np.sin(r_rads[0]),  np.cos(r_rads[0])]
-                       ])
-        y_rot = np.mat([ [  np.cos(r_rads[1]),                 0.0,  np.sin(r_rads[1])]
-                       , [                0.0,                 1.0,                0.0]
-                       , [ -np.sin(r_rads[1]),                 0.0,  np.cos(r_rads[1])]
-                       ])
-        z_rot = np.mat([ [  np.cos(r_rads[2]), -np.sin(r_rads[2]),                 0.0]
-                       , [  np.sin(r_rads[2]),  np.cos(r_rads[2]),                 0.0]
-                       , [                0.0,                0.0,                 1.0]
-                       ])
-        rot_matrix = x_rot * y_rot * z_rot
-        new_points = np.array([ (origin + (point - origin) * rot_matrix).A1 
-                                for point in self.points() 
-                              ])
+        if self.euc_diff:
+          r_rads = self.euc_rads
+          x_rot = np.mat([ [                1.0,                0.0,                0.0]
+                         , [                0.0,  np.cos(r_rads[0]), -np.sin(r_rads[0])]
+                         , [                0.0,  np.sin(r_rads[0]),  np.cos(r_rads[0])]
+                         ])
+          y_rot = np.mat([ [  np.cos(r_rads[1]),                 0.0,  np.sin(r_rads[1])]
+                         , [                0.0,                 1.0,                0.0]
+                         , [ -np.sin(r_rads[1]),                 0.0,  np.cos(r_rads[1])]
+                         ])
+          z_rot = np.mat([ [  np.cos(r_rads[2]), -np.sin(r_rads[2]),                 0.0]
+                         , [  np.sin(r_rads[2]),  np.cos(r_rads[2]),                 0.0]
+                         , [                0.0,                0.0,                 1.0]
+                         ])
+          self.rot_matrix = x_rot * y_rot * z_rot
+          self.euc_diff = False
+        new_points = __POOL__.map(_mappable_rotate3D, self.__mappable_points())
         self.set_points(new_points)
         return self
+
 
 class Obscuring():
     __metaclass__ = abc.ABCMeta
@@ -416,3 +436,5 @@ if __name__=='__main__':
 
 
 
+__POOL__=multiprocessing.Pool(multiprocessing.cpu_count())
+# __POOL__=multiprocessing.Pool(1)
