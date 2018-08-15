@@ -91,7 +91,8 @@ def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
     # points = I.ifilter(lambda p: LOS_test(eye, p, shapes), points) # Too slow
 
-    _lim = np.float(np.tan(45.0 * np.pi / 180.0) * dist)
+    # _lim = np.float(np.tan(45.0 * np.pi / 180.0) * dist)
+    _lim = 1.0
     points = (console_map.latlon(x,y) for (x,y) in points)
     # points = (console_map.latlon(x,y) for (x,y) in points 
             # if -_lim <= x <= _lim and -_lim <= y <= _lim)
