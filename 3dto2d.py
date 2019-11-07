@@ -102,10 +102,34 @@ def make_plot_points(eye, points3d, shapes, dist = np.float(1), zip_depth=True):
 
     return points
 
+BLIT_SCREEN = ''
+def blit(new_surface, presplit=False):
+    global BLIT_SCREEN
+
+    if presplit: NEW_SCREEN = new_surface
+    else:        NEW_SCREEN = new_surface.split('\n')
+
+    if BLIT_SCREEN == '':
+        if presplit:
+            new_surface = '\n'.join(map(lambda s: ''.join(s), reversed(SCREEN)))
+        print colorama.Cursor.POS() + new_surface
+
+    else: 
+        y = 1
+        for o_line, n_line in I.izip(BLIT_SCREEN, NEW_SCREEN):
+            x = 1
+            for old,new in I.izip(o_line, n_line):
+                if old != new:
+                    print colorama.Cursor.POS(x,y) + new
+                x += 1
+            y += 1
+    BLIT_SCREEN = NEW_SCREEN
+
+blit_draw = blit
 
 init_SCREEN = True
 SCREEN = None
-def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_10, MAX_DEPTH=20):
+def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_10, MAX_DEPTH=20, blit=False):
     global SCREEN, init_SCREEN
     if init_SCREEN: 
         SCREEN = np.zeros(shape=(HEIGHT, WIDTH), dtype='|S1')
@@ -141,7 +165,8 @@ def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE
             elif index >= len_grey_scale: index = len_grey_scale - 1
             SCREEN[i][j] = grey_scale[ index ]
 
-    return '\n'.join(map(lambda s: ''.join(s), reversed(SCREEN)))
+    if blit: blit_draw(map(lambda s: ''.join(s), reversed(SCREEN)), presplit=True)
+    else:    return '\n'.join(map(lambda s: ''.join(s), reversed(SCREEN)))
 
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -190,11 +215,11 @@ __POOL__=multiprocessing.Pool(multiprocessing.cpu_count())
 def run(shapes):
     new_shapes = [shape.rotate3D_qua() for shape in shapes]
     # new_shapes = (shape.rotate3D() for shape in shapes)
-    vis_surface = make_visible_surface(HEIGHT, WIDTH, eye, dist, new_shapes)
-    print colorama.Cursor.POS() + vis_surface
+    make_visible_surface(HEIGHT, WIDTH, eye, dist, new_shapes, blit=True)
+    # print colorama.Cursor.POS() + vis_surface
 
 
-Number_of_Shapes = 4
+Number_of_Shapes = 5
 max_loops = 20
 while max_loops > 0 or max_loops == -42:
     max_loops -= 1 if max_loops != -42 else 0
@@ -221,7 +246,7 @@ while max_loops > 0 or max_loops == -42:
     for shape in shape_list:
         shape.setOrigin(shape.center)
         shape.setRotationVector((random.random(),random.random(),random.random()))
-        shape.setRotationAngle(random.randint(5,20))
+        shape.setRotationAngle(random.randint(1,6))
         shape.setRotationEucAngles((0,0,10))
 
     for _ in xrange(50):

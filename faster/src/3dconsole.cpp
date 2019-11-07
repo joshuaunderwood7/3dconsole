@@ -1,76 +1,13 @@
 #include <iostream>
 #include <string>
+#include <deque>
 
 #include <shapes.h>
+#include <screen.h>
 
 #include <iostream>
 #include <string>
 using namespace std;
-
-string GREY_SCALE_FULL  = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
-string GREY_SCALE_10    = "@%#*+=-:. ";
-const int HEIGHT = (24 * 2) + 6;
-const int WIDTH  = 80 * 2;
-char      SCREEN[WIDTH*HEIGHT];
-
-/* Printing to the screen */
-class Screen
-{
-    private:
-        Vec3   eye;
-        double dist;
-        int    index;
-
-    public:
-
-        Screen() 
-        {
-            dist = (1.0); 
-            eye = {0.0, 0.0, -20.0};
-        }
-
-        ~Screen() {}
-
-        void setEye(Vec3 eye)     { this->eye  = eye;  }
-        void setDist(double dist) { this->dist = dist; }
-
-        void gotoxy(int x, int y) { cout << "\033[" << x << ";" << y << "H"; };
-        void clearScreen() { for(int ii=WIDTH*HEIGHT; ii>=0; --ii) SCREEN[ii]=0x7F; }
-
-        void addShape(Shape * shape)
-        {
-            for(Vec3 point : shape->perspectiveDivision(eye))
-            {
-                if (point[0] < -1.0 || point[0] > 1.0) continue;
-                if (point[1] < -1.0 || point[1] > 1.0) continue;
-
-                index = ( int((HEIGHT-1) * ((point[0] + 1) / 2.0) ) * WIDTH ) 
-                        + int( (WIDTH-1) * ((point[1] + 1) / 2.0) );
-
-                if (SCREEN[index] > point[2]) SCREEN[index] = point[2];
-            }
-        }
-
-        void printScreen()
-        {
-            gotoxy(0,0);
-            int outindex;
-            int MAX_DEPTH = 69;
-
-            for(int y=0; y<HEIGHT; ++y) 
-            {
-                for(int x=0; x<WIDTH; ++x) 
-                {
-                    index = ( y  * WIDTH ) + x ;
-                    outindex = SCREEN[index];
-                    if (outindex > MAX_DEPTH) outindex = MAX_DEPTH;
-                    cout << GREY_SCALE_FULL[outindex];
-                }
-                cout << endl;
-            }
-        }
-
-};
 
 void printShape(Shape * shape)
 {
@@ -84,22 +21,34 @@ void printShape(Shape * shape)
 
 int main(int argc, const char *argv[])
 {
-    Screen screen;
+    Screen screen(57, 217);
 
-    Cube testShape({0,0,0}, 9, 10);
+    Cube cubes[2] = { Cube({-5,-5,-5}, 9, 10)
+                    , Cube({ 5, 5, 5}, 9, 10)
+                    };
 
-    testShape.setRotation({0,0,1}, M_PI/2);
-    testShape.rotate();
 
-    testShape.setRotation({1,5,3}, 0.0119);
+    cubes[0].setRotation({0,0,1}, M_PI/2);
+    cubes[0].rotate();
+
+    cubes[1].setRotation({1,0,0}, M_PI/3);
+    cubes[1].rotate();
+
+    cubes[0].setRotation({ 1, 5,-3}, 0.00819);
+    cubes[1].setRotation({-3, 7, 2}, 0.00819);
 
     int N = 10000;
     for(int ii=0; ii<=N; ++ii)
     {
         screen.clearScreen();
-        screen.addShape(&testShape);
+
+        for (Cube &cube : cubes)
+            screen.addShape(&cube);
+
         screen.printScreen();
-        testShape.rotate();
+
+        for (Cube &cube : cubes)
+            cube.rotate();
     }
 
     return 0;

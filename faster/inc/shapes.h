@@ -44,6 +44,8 @@ class Shape
         void setOrigin          (Vec3 origin)          { this->origin = origin; };
         void rotate             ();                       // Rotate the shape by RotationVector and RotationAngle
 
+        void shift              (Vec3 offset); 
+
         deque<Vec3> perspectiveDivision(Vec3 & eye, double plane_dist=1.0);
 
     protected:
@@ -92,24 +94,24 @@ class Tetrahedron : public Shape
     public:
 
         Tetrahedron();
-        Tetrahedron(Tetrahedron &original);
+        Tetrahedron(const Tetrahedron &original);
         Tetrahedron(Vec3 A, Vec3 B, Vec3 C, Vec3 D, int N=10);
         virtual deque<Vec3> getPoints   (Vec3 & eye) { return shell_vis(eye); };
 
         deque<Vec3> shell_vis(Vec3 & eye, bool bottom=true);
 
-        Vec3 getA() { return points[0]; }
-        Vec3 getB() { return points[1]; }
-        Vec3 getC() { return points[2]; }
-        Vec3 getD() { return points[3]; }
+        Vec3 getA() const { return points[0]; }
+        Vec3 getB() const { return points[1]; }
+        Vec3 getC() const { return points[2]; }
+        Vec3 getD() const { return points[3]; }
 
         void setA(Vec3 x) { points[0] = x; }
         void setB(Vec3 x) { points[1] = x; }
         void setC(Vec3 x) { points[2] = x; }
         void setD(Vec3 x) { points[3] = x; }
 
-        int  getN()      { return N; }
-        void setN(int n) { N=n; }
+        int  getN() const { return N; }
+        void setN(int n)  { N=n; }
 
     private:
         int  N;
@@ -119,6 +121,7 @@ class Cube : public Shape
 {
     public:
 
+        Cube(const Cube& original);
         Cube(Vec3 center, double side_length, int N=10);
         virtual deque<Vec3> getPoints   (Vec3 & eye);
 

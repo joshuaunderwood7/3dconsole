@@ -68,16 +68,29 @@ void Shape::setRotation( Vec3   RotationVector
 // Rotate the shape by RotationVector and RotationAngle
 void Shape::rotate()
 {
-    double point[3];
+    double new_point[3];
     int ii;
-    for(auto iter = points.begin(); iter != points.end(); iter++)
+    for(auto &point : points)
     {
-        for (ii=0; ii<3; ++ii) point[ii] = (*iter)[ii] - origin[ii];
+        for (ii=0; ii<3; ++ii) new_point[ii] = point[ii] - origin[ii];
 
-        q_RotationVector.QuatRotation(point);
+        q_RotationVector.QuatRotation(new_point);
 
-        for (ii=0; ii<3; ++ii) (*iter)[ii] = point[ii] + origin[ii];
+        for (ii=0; ii<3; ++ii) point[ii] = new_point[ii] + origin[ii];
     }
+};
+
+void Shape::shift(Vec3 offset) 
+{
+    for(auto &point : points)
+    {
+        point[0] += offset[0];
+        point[1] += offset[1];
+        point[2] += offset[2];
+    }
+    origin[0] += offset[0];
+    origin[1] += offset[1];
+    origin[2] += offset[2];
 };
 
 Line::Line(Vec3 A, Vec3 B, int N)
@@ -139,7 +152,7 @@ Tetrahedron::Tetrahedron()
     setOrigin({0,0,0});
 };
 
-Tetrahedron::Tetrahedron(Tetrahedron &original)
+Tetrahedron::Tetrahedron(const Tetrahedron &original)
 {
     this->setA(original.getA());
     this->setB(original.getB());
@@ -176,14 +189,22 @@ deque<Vec3> Tetrahedron::shell_vis(Vec3 & eye, bool bottom)
     bool seeC =  sameside3d(eye, points[2], points[3], points[0], points[1]);
     bool seeD =  sameside3d(eye, points[3], points[0], points[1], points[2]);
 
-    if (!seeD)           for(auto point :Tri(points[0],points[1],points[2], N).fill()) { result.push_back(point); }
-    if (!seeB)           for(auto point :Tri(points[0],points[2],points[3], N).fill()) { result.push_back(point); }
-    if (!seeC)           for(auto point :Tri(points[0],points[1],points[3], N).fill()) { result.push_back(point); }
-    if (!seeA && bottom) for(auto point :Tri(points[1],points[2],points[3], N).fill()) { result.push_back(point); }
+    if (!seeD)           for(auto const &point :Tri(points[0],points[1],points[2], N).fill()) { result.push_back(point); }
+    if (!seeB)           for(auto const &point :Tri(points[0],points[2],points[3], N).fill()) { result.push_back(point); }
+    if (!seeC)           for(auto const &point :Tri(points[0],points[1],points[3], N).fill()) { result.push_back(point); }
+    if (!seeA && bottom) for(auto const &point :Tri(points[1],points[2],points[3], N).fill()) { result.push_back(point); }
 
     return result;
 };
 
+Cube::Cube(const Cube& original)
+{
+    this->A      = original.A;
+    this->B      = original.B;
+    this->C      = original.C;
+    this->D      = original.D;
+    this->middle = original.middle;
+};
 
 Cube::Cube(Vec3 center, double side_length, int N)
 {
@@ -202,7 +223,12 @@ Cube::Cube(Vec3 center, double side_length, int N)
     C = Tetrahedron( scale(-1, middle.getC()), middle.getA(), middle.getB(), middle.getD(), N);
     D = Tetrahedron( scale(-1, middle.getD()), middle.getA(), middle.getB(), middle.getC(), N);
 
-    middle.setOrigin(center);
+    middle.shift(center);
+    A.shift(center);
+    B.shift(center);
+    C.shift(center);
+    D.shift(center);
+
     A.setOrigin(center);
     B.setOrigin(center);
     C.setOrigin(center);
@@ -213,10 +239,10 @@ Cube::Cube(Vec3 center, double side_length, int N)
 deque<Vec3> Cube::getPoints(Vec3 & eye) 
 { 
     deque<Vec3> result;
-    for(auto point : A.shell_vis(eye, false)) result.push_back(point);
-    for(auto point : B.shell_vis(eye, false)) result.push_back(point);
-    for(auto point : C.shell_vis(eye, false)) result.push_back(point);
-    for(auto point : D.shell_vis(eye, false)) result.push_back(point);
+    for(auto const &point : A.shell_vis(eye, false)) result.push_back(point);
+    for(auto const &point : B.shell_vis(eye, false)) result.push_back(point);
+    for(auto const &point : C.shell_vis(eye, false)) result.push_back(point);
+    for(auto const &point : D.shell_vis(eye, false)) result.push_back(point);
     return result;
 };
 

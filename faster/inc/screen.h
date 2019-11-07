@@ -8,11 +8,6 @@
 
 using namespace std;
 
-string GREY_SCALE_FULL  = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
-string GREY_SCALE_10    = "@%#*+=-:. ";
-const int HEIGHT = (24 * 2) + 6;
-const int WIDTH  = 80 * 2;
-char      SCREEN[WIDTH*HEIGHT];
 
 /* Printing to the screen */
 class Screen
@@ -20,12 +15,26 @@ class Screen
     private:
         Vec3   eye;
         int    index;
+        string GREY_SCALE_FULL  = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+        string GREY_SCALE_10    = "@%#*+=-:. ";
+        int    HEIGHT = (24 * 2) + 6;
+        int    WIDTH  = 80 * 2;
+        char*  SCREEN;
 
     public:
 
         Screen() 
         {
             eye = {0.0, 0.0, -20.0};
+            SCREEN = (char *)malloc(WIDTH*HEIGHT * sizeof(char));
+        }
+
+        Screen(int height_in, int width_in) 
+        {
+            eye = {0.0, 0.0, -20.0};
+            HEIGHT = height_in;
+            WIDTH  = width_in;
+            SCREEN = (char *)malloc(WIDTH*HEIGHT * sizeof(char));
         }
 
         ~Screen() {}

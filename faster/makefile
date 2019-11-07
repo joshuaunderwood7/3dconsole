@@ -14,6 +14,7 @@ LIBS=
 
 SRC=\
     src/shapes.cpp\
+    src/screen.cpp\
     src/quaternion.cpp
 
 INC_SRC_LIB=\
