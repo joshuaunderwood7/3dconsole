@@ -93,6 +93,12 @@ void Shape::shift(Vec3 offset)
     origin[2] += offset[2];
 };
 
+Dot::Dot(Vec3 A, char _symbol)
+{
+    points.push_back(A);
+    symbol = _symbol;
+};
+
 Line::Line(Vec3 A, Vec3 B, int N)
 {
     double deltaX = (B[0] - A[0])/N;

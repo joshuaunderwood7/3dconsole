@@ -20,6 +20,7 @@ class Screen
         int    HEIGHT = (24 * 2) + 6;
         int    WIDTH  = 80 * 2;
         char*  SCREEN;
+        char*  SPRITE;
 
     public:
 
@@ -35,6 +36,7 @@ class Screen
             HEIGHT = height_in;
             WIDTH  = width_in;
             SCREEN = (char *)malloc(WIDTH*HEIGHT * sizeof(char));
+            SPRITE = (char *)malloc(WIDTH*HEIGHT * sizeof(char));
         }
 
         ~Screen() {}
@@ -43,10 +45,15 @@ class Screen
 
         void gotoxy(int x, int y) { cout << "\033[" << x << ";" << y << "H"; };
         void clearScreen() { for(int ii=WIDTH*HEIGHT; ii>=0; --ii) SCREEN[ii]=0x7F; }
+        void clearSprite() { for(int ii=WIDTH*HEIGHT; ii>=0; --ii) SPRITE[ii]=0x7F; }
+        void clearAll()    { clearScreen(); clearSprite(); }
 
-        void addShape(Shape * shape);
+        void addShape (Shape  * shape);
+        void addSprite(Sprite * sprite);
 
         void printScreen();
+        void printSprite();
+        void printAll() { printScreen(); printSprite(); };
 
 };
 

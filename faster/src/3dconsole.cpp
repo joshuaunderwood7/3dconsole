@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <deque>
+#include <unistd.h>
 
 #include <shapes.h>
 #include <screen.h>
@@ -20,6 +21,36 @@ void printShape(Shape * shape)
 };
 
 int main(int argc, const char *argv[])
+{
+    Screen screen(24, 80);
+
+    Line line({0,0,0}, {5,5,0});
+    Cube cube({-5,-5,0}, 16);
+    Dot dot({2,2,0}, '$');
+
+    cube.setRotation({0,.1,1}, M_PI/200);
+
+    int N = 10000;
+    for(int ii=0; ii<N; ++ii)
+    {
+        screen.clearScreen();
+
+        //screen.addShape(&line);
+        screen.addShape(&cube);
+        screen.addSprite(&dot);
+
+        //screen.printScreen();
+        screen.printSprite();
+
+        cube.rotate();
+
+        usleep(1000);
+    }
+    
+    return 0;
+}
+
+int main_old(int argc, const char *argv[])
 {
     Screen screen(57, 217);
 
@@ -46,6 +77,7 @@ int main(int argc, const char *argv[])
             screen.addShape(&cube);
 
         screen.printScreen();
+        usleep(10000);
 
         for (Cube &cube : cubes)
             cube.rotate();

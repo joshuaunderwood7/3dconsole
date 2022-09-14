@@ -57,6 +57,19 @@ class Shape
 
 };
 
+class Sprite : public Shape
+{
+    protected:
+        char symbol;
+};
+
+class Dot : public Sprite
+{
+    public:
+
+        Dot(Vec3 A, char symbol);
+        virtual deque<Vec3> getPoints   (Vec3 & eye) { return points; }
+};
 
 class Line : public Shape
 {
