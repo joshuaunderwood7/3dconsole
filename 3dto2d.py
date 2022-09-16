@@ -129,7 +129,7 @@ blit_draw = blit
 
 init_SCREEN = True
 SCREEN = None
-def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_10, MAX_DEPTH=20, blit=False):
+def make_visible_surface(HEIGHT, WIDTH, eye, dist, shapes, grey_scale=GREY_SCALE_FULL, MAX_DEPTH=20, blit=False):
     global SCREEN, init_SCREEN
     if init_SCREEN: 
         SCREEN = np.zeros(shape=(HEIGHT, WIDTH), dtype='|S1')

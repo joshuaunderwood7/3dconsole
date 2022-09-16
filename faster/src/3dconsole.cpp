@@ -39,8 +39,8 @@ int main(int argc, const char *argv[])
         screen.addShape(&cube);
         screen.addSprite(&dot);
 
-        //screen.printScreen();
-        screen.printSprite();
+        screen.printScreen();
+        //screen.printSprite();
 
         cube.rotate();
 

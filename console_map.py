@@ -2,6 +2,7 @@ import functools
 import os
 import itertools as I
 from exceptions import IndexError
+from math import cos,sin
 
 class latlon():
     def __init__(self, lat, lon):
@@ -17,6 +18,15 @@ class latlon():
         if n == 0: return self.lat
         if n == 1: return self.lon
         raise IndexError
+
+    def get_xyz(sel, radius=6378000):
+        """radius in meters"""
+        x = radius * cos(lat) * cos(lon)
+        y = radius * cos(lat) * sin(lon)
+        z = radius * sin(lat)
+        return (x,y,z)
+
+
 
 def _filter_mm(min, max, x): return min <= x <= max
 
