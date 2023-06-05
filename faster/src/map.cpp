@@ -11,7 +11,6 @@
 #include <shapes.h>
 #include <screen.h>
 #include <gshhs.h>
-#include <TLE.h>
 
 using namespace std;
 
