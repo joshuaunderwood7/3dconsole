@@ -1,6 +1,10 @@
 CC=g++
 
+<<<<<<< HEAD
 DEBUGFLAG=-ggdb -Wall
+=======
+DEBUGFLAG=-ggdb -Wall -w
+>>>>>>> b2ac55a (Added GSHHS data to repo, and added console plot of map for C++)
 PROFILEFLAG=-pg
 CPPFLAGS=-std=c++11
 OPTFLAGS=-O3 -s
@@ -22,6 +26,18 @@ INC_SRC_LIB=\
 	    $(SRC) \
 	    $(LIBS)
 
+<<<<<<< HEAD
+=======
+map:
+	$(CC) \
+	    $(INC_SRC_LIB) \
+	    src/map.cpp \
+	    $(STATICLIBS) \
+	    $(CPPFLAGS) \
+	    $(DEBUGFLAG) \
+	    -o bin/map
+
+>>>>>>> b2ac55a (Added GSHHS data to repo, and added console plot of map for C++)
 3dconsole:
 	$(CC) \
 	    $(INC_SRC_LIB) \
@@ -40,9 +56,26 @@ quaternion:
 	    $(DEBUGFLAG) \
 	    -o bin/quaternion
 
+<<<<<<< HEAD
 .PHONEY: all clean
 
 all: 3dconsole
+=======
+sgp4:
+	$(CC) \
+	    $(INC_SRC_LIB) \
+	    src/SGP4.c \
+	    src/TLE.cpp \
+	    src/TestSGP4.cpp \
+	    $(STATICLIBS) \
+	    $(CPPFLAGS) \
+	    $(DEBUGFLAG) \
+	    -o bin/TestSGP4
+
+.PHONEY: all clean
+
+all: map
+>>>>>>> b2ac55a (Added GSHHS data to repo, and added console plot of map for C++)
 
 clean:
 	rm bin/*
