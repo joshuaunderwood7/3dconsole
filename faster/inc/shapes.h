@@ -59,7 +59,11 @@ class Shape
 
 class Sprite : public Shape
 {
+<<<<<<< HEAD
     protected:
+=======
+    public:
+>>>>>>> b2ac55a (Added GSHHS data to repo, and added console plot of map for C++)
         char symbol;
 };
 
