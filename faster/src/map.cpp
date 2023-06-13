@@ -165,8 +165,8 @@ int main(int argc, const char *argv[])
             //cout << "lat idx = " << polygon.get_screen_lat(point) << endl
             //     << "lon idx = " << polygon.get_screen_lon(point) << endl;
 
-            dots.push_back( Dot( { polygon.get_screen_lat(point)
-                                 , polygon.get_screen_lon(point) 
+            dots.push_back( Dot( { static_cast<double>( polygon.get_screen_lat(point) )
+                                 , static_cast<double>( polygon.get_screen_lon(point) )
                                  , 0 }, '+' ));
         }
     }
